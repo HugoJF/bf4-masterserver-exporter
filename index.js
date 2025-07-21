@@ -32,13 +32,13 @@ console.log('OpenTelemetry SDK started');
 
 // Use OpenTelemetry API to create meter and counter
 const meter = metrics.getMeter('bf4-server-metrics');
-const inGamePlayers = meter.createCounter('in_game_players', {
+const inGamePlayers = meter.createCounter('bf4_in_game_players', {
     description: 'Current player count across all servers',
 });
-const inQueuePlayers = meter.createCounter('in_queue_players', {
+const inQueuePlayers = meter.createCounter('bf4_in_queue_players', {
     description: 'Current player count across all servers',
 });
-const inSpectatorPlayers = meter.createCounter('in_spectators_players', {
+const inSpectatorPlayers = meter.createCounter('bf4_in_spectators_players', {
     description: 'Current player count across all servers',
 });
 
