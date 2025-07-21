@@ -1,7 +1,11 @@
-import * as opentelemetry from '@opentelemetry/sdk-node';
-import {PrometheusExporter} from '@opentelemetry/exporter-prometheus';
-import {metrics} from '@opentelemetry/api';
 import axios from "axios";
+import express from 'express';
+import {Registry, Gauge} from 'prom-client';
+
+const app = express();
+const port = process.env.PORT || 9464;
+
+const register = new Registry();
 
 async function getServers() {
     const response = await axios.get('https://api.gametools.network/bf4/servers', {
@@ -19,51 +23,64 @@ async function getServers() {
     return response.data;
 }
 
-const exporter = new PrometheusExporter({port: 9464}, () => {
-    console.log('Prometheus scrape endpoint: http://localhost:9464/metrics');
+// Create gauges per server
+const inGamePlayers = new Gauge({
+    name: 'bf4_in_game_players',
+    help: 'Current players in BF4 server',
+    labelNames: ['id', 'map', 'mode', 'country', 'region']
+});
+const inQueuePlayers = new Gauge({
+    name: 'bf4_in_queue_players',
+    help: 'Current players in queue in BF4 server',
+    labelNames: ['id', 'map', 'mode', 'country', 'region']
+});
+const inSpectatorsPlayers = new Gauge({
+    name: 'bf4_in_spectators_players',
+    help: 'Current spectators in BF4 server',
+    labelNames: ['id', 'map', 'mode', 'country', 'region']
+});
+const maxPlayers = new Gauge({
+    name: 'bf4_max_players',
+    help: 'Max players in BF4 server',
+    labelNames: ['id', 'map', 'mode', 'country', 'region']
+});
+const info = new Gauge({
+    name: 'bf4_server_info',
+    help: 'BF4 server info',
+    labelNames: ['id', 'name']
 });
 
-const sdk = new opentelemetry.NodeSDK({
-    metricReader: exporter,
-});
+register.registerMetric(inGamePlayers);
+register.registerMetric(inQueuePlayers);
+register.registerMetric(inSpectatorsPlayers);
+register.registerMetric(maxPlayers);
+register.registerMetric(info);
 
-sdk.start()
-console.log('OpenTelemetry SDK started');
-
-// Use OpenTelemetry API to create meter and counter
-const meter = metrics.getMeter('bf4-server-metrics');
-const inGamePlayers = meter.createGauge('bf4_in_game_players', {
-    description: 'Current player count across all servers',
-});
-const inQueuePlayers = meter.createGauge('bf4_in_queue_players', {
-    description: 'Current player count across all servers',
-});
-const inSpectatorPlayers = meter.createGauge('bf4_in_spectators_players', {
-    description: 'Current player count across all servers',
-});
-
-async function update() {
-    const data = await getServers()
+async function updateMetrics() {
+    const data = await getServers();
     const servers = data.servers;
 
-    console.log(data);
+    for (const server of servers) {
+        const labels = [server.gameId, server.currentMap, server.mode, server.country, server.region];
 
-    servers.forEach(server => {
-        const attributes = {
-            id: server.gameId,
-            name: server.prefix,
-            mode: server.mode,
-            map: server.currentMap,
-            country: server.country,
-            region: server.region,
-            maxPlayers: server.maxPlayers,
-        }
+        console.log(server)
 
-        inQueuePlayers.record(server.inQue, attributes);
-        inSpectatorPlayers.record(server.inSpectator, attributes);
-        inGamePlayers.record(server.playerAmount, attributes)
-    })
+        inGamePlayers.labels(...labels).set(server.playerAmount);
+        inQueuePlayers.labels(...labels).set(server.inQue);
+        inSpectatorsPlayers.labels(...labels).set(server.inSpectator);
+        maxPlayers.labels(...labels).set(server.maxPlayers);
+        info.labels(server.gameId, server.prefix).set(1);
+    }
 }
 
-void update();
-setInterval(update, 5 * 60_000);
+// /metrics endpoint
+app.get('/metrics', async (req, res) => {
+    await updateMetrics();
+
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+});
+
+app.listen(port, () => {
+    console.log(`http://localhost:${port}/metrics`);
+});
