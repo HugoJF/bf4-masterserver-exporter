@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: bf4-masterserver-exporter
+    restart: unless-stopped
+    ports:
+      - "9464:9464"
