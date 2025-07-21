@@ -60,16 +60,16 @@ async function updateMetrics() {
     const data = await getServers();
     const servers = data.servers;
 
+    inGamePlayers.reset()
+    inQueuePlayers.reset();
+    inSpectatorsPlayers.reset();
+    maxPlayers.reset();
+    info.reset();
+
     for (const server of servers) {
         const labels = [server.gameId, server.currentMap, server.mode, server.country, server.region];
 
         console.log(server)
-
-        inGamePlayers.reset()
-        inQueuePlayers.reset();
-        inSpectatorsPlayers.reset();
-        maxPlayers.reset();
-        info.reset();
 
         inGamePlayers.labels(...labels).set(server.playerAmount);
         inQueuePlayers.labels(...labels).set(server.inQue);
