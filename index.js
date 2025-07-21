@@ -65,6 +65,12 @@ async function updateMetrics() {
 
         console.log(server)
 
+        inGamePlayers.reset()
+        inQueuePlayers.reset();
+        inSpectatorsPlayers.reset();
+        maxPlayers.reset();
+        info.reset();
+
         inGamePlayers.labels(...labels).set(server.playerAmount);
         inQueuePlayers.labels(...labels).set(server.inQue);
         inSpectatorsPlayers.labels(...labels).set(server.inSpectator);
