@@ -47,7 +47,7 @@ const maxPlayers = new Gauge({
 const info = new Gauge({
     name: 'bf4_server_info',
     help: 'BF4 server info',
-    labelNames: ['id', 'name']
+    labelNames: ['id', 'name', 'link']
 });
 
 register.registerMetric(inGamePlayers);
@@ -67,7 +67,7 @@ async function updateMetrics() {
     info.reset();
 
     for (const server of servers) {
-        const labels = [server.gameId, server.currentMap, server.mode, server.country, server.region];
+        const labels = [server.battlelogId || server.serverId, server.currentMap, server.mode, server.country, server.region];
 
         console.log(server)
 
@@ -75,7 +75,7 @@ async function updateMetrics() {
         inQueuePlayers.labels(...labels).set(server.inQue);
         inSpectatorsPlayers.labels(...labels).set(server.inSpectator);
         maxPlayers.labels(...labels).set(server.maxPlayers);
-        info.labels(server.gameId, server.prefix).set(1);
+        info.labels(server.gameId, server.prefix, server.serverLink).set(1);
     }
 }
 
